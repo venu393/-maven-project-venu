@@ -1,3 +1,7 @@
+# This is maven project
+ This is mulesoft advance cource training project
+
+## how to run the project
 1. Add the remote repository: 
     `git remote add origin https://github.com/<your_uid>/maven-project-<your_initials>.git`
 
