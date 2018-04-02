@@ -1,85 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule
-	xmlns:json="http://www.mulesoft.org/schema/mule/json"
-	xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
-	xmlns:jdbc-ee="http://www.mulesoft.org/schema/mule/ee/jdbc"
-	xmlns:db="http://www.mulesoft.org/schema/mule/db"
-	xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking"
-	xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:sqs="http://www.mulesoft.org/schema/mule/sqs" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:sns="http://www.mulesoft.org/schema/mule/sns" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
-http://www.mulesoft.org/schema/mule/ee/jdbc http://www.mulesoft.org/schema/mule/ee/jdbc/current/mule-jdbc-ee.xsd
-http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
-http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
-http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd"
->
-	<http:listener-config
-		name="HTTP_Listener_Configuration"
-		host="0.0.0.0"
-		port="8081"
-		doc:name="HTTP Listener Configuration" />
-	<spring:beans>
-		<spring:bean
-			id="Bean"
-			name="DerbyDatasource"
-			class="com.mulesoft.training.Database" />
-	</spring:beans>
-	<db:derby-config
-		name="Derby_Configuration"
-		url="jdbc:derby:memory:muleEmbeddedDB;create=true"
-		doc:name="Derby Configuration" />
-	<jms:activemq-connector
-		name="Active_MQ"
-		brokerURL="vm://localhost"
-		validateConnections="true"
-		doc:name="Active MQ" />
-
-	<flow name="mavenFlow">
-		<http:listener
-			config-ref="HTTP_Listener_Configuration"
-			path="/"
-			doc:name="HTTP" />
-		<set-payload
-			value="Hello Maven"
-			doc:name="Set Payload" />
-	</flow>
-
-	<flow name="logFlights">
-		<jms:inbound-endpoint
-			queue="flights"
-			connector-ref="Active_MQ"
-			doc:name="JMS" />
-		<logger
-			message="#[payload]"
-			level="INFO"
-			doc:name="Logger" />
-	</flow>
-
-	<flow name="retrieveFlights">
-		<http:listener
-			config-ref="HTTP_Listener_Configuration"
-			path="/flights"
-			allowedMethods="GET"
-			doc:name="HTTP" />
-		<db:select
-			config-ref="Derby_Configuration"
-			doc:name="Database"
-		>
-			<db:parameterized-query><![CDATA[SELECT * FROM flights]]></db:parameterized-query>
-		</db:select>
-		<json:object-to-json-transformer doc:name="Object to JSON" />
-        <set-property propertyName="#[&quot;Content-Type&quot;]" value="#[&quot;application/json&quot;]" doc:name="Property"/>
-		<jms:outbound-endpoint
-			queue="flights"
-			connector-ref="Active_MQ"
-			doc:name="send ToJMS" />
-	</flow>
-
+http://www.mulesoft.org/schema/mule/sqs http://www.mulesoft.org/schema/mule/sqs/current/mule-sqs.xsd
+http://www.mulesoft.org/schema/mule/sns http://www.mulesoft.org/schema/mule/sns/current/mule-sns.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <sqs:config name="Amazon_SQS__Configuration" accessKey="${amazon.accesskey}" secretKey="${amazon.secretkey}" doc:name="Amazon SQS: Configuration" defaultQueueName="${amazon.sqs.queue.name}" region="${amazon.sqs.queue.region}" url="${amazon.sqs.queue.url}"/>
+    <sns:config name="Amazon_SNS__Configuration" accessKey="${amazon.accesskey}" secretKey="${amazon.secretkey}" doc:name="Amazon SNS: Configuration" testTopicArn="${amazon.sns.topic.arn}" region="${amazon.sns.topic.region}"/>
+    <flow name="publish_message_to_topic" >
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
+        <sns:publish config-ref="Amazon_SNS__Configuration" doc:name="Publish message to topic">
+            <sns:publish topicArn="${amazon.sns.topic.arn}"  message="Hello world!" subject="Testing publish to queue"/>
+	    </sns:publish>
+        <logger message="Message ID: #[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="recieve_message_from_queue">
+        <sqs:receive-messages config-ref="Amazon_SQS__Configuration" doc:name="Amazon SQS (Streaming)"/>
+        <logger message="Received Message : #[payload]" level="INFO"
+			doc:name="Display Message" />
+        <logger message="Message with handle : #[header:inbound:sqs.message.receipt.handle]" level="INFO" doc:name="Display Message Handle"/>
+    </flow>
 </mule>
